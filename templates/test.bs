@@ -1,0 +1,32 @@
+- from . import test2
+- def ku(text):
+    h2
+        - yield text
+    p
+        - yield "Awesome"
+
+doctype
+html
+    head
+        title "magic is a pony"
+    body
+        - yield from test2.render()
+        h1 class="project"
+        p
+            "colors of the magic"
+        div
+            table
+                tbody
+                    tr
+                        td
+                            "magic"
+        div
+            "content"
+            - for i in range(10):
+                div
+                    span
+                        - yield "Common"
+
+        - if True:
+            "conditional"
+        - yield from ku('there')
