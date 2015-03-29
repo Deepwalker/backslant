@@ -3,16 +3,18 @@
     h2
         - yield text
     p
-        - yield "Awesome"
+        "Awesome"
 
-doctype
+doctype html
 html
-    head
-        title "magic is a pony"
-    body
-        - yield from test2.render()
+    head class=('aaa' if test2 else 'bbb')
+        title
+            - yield "magic is a pony: " + options['title']
+    body.content#body ng-app="TestApplication"
+        - yield from test2.render(**options)
         h1 class="project"
-        p
+            "kuku"
+        p {'krom-pom' + '_': 'tom tom' + ' ' + 'tam tam'}
             "colors of the magic"
         div
             table
@@ -22,8 +24,8 @@ html
                             "magic"
         div
             "content"
-            - for i in range(10):
-                div
+            - for i in range(2):
+                div class=("cls_{}".format(str(i)))
                     span
                         - yield "Common"
 

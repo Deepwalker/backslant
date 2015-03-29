@@ -1,5 +1,7 @@
 import sys
 import ast
+import pyparsing as pp
+from markupsafe import Markup, escape
 
 
 def find_indent(lst):
@@ -45,21 +47,79 @@ def parse_file(filename):
     return idented_tree
 
 
+html_chars = pp.alphanums + '-_'
+tag_def = pp.Word(html_chars)
+tag_class = pp.Combine(pp.Literal('.') + pp.Word(html_chars))
+tag_id = pp.Combine(pp.Literal('#') + pp.Word(html_chars))
+attribute_name = pp.Word(html_chars)
+
+def parse_attribute_value(s, l, t):
+    return ast.parse(s[t._original_start:t._original_end]).body[0].value
+attribute_value = pp.originalTextFor(
+      pp.sglQuotedString()
+    ^ pp.dblQuotedString()
+    ^ pp.nestedExpr()
+    ^ pp.nestedExpr('[', ']')
+).setParseAction(parse_attribute_value)
+
+def parse_tag_attribute(s, l, t):
+    return ast.Dict(
+        keys=[ast.Str(s=str(k)) for k, v in t],
+        values=[v for k, v in t]
+    )
+tag_attribute = pp.Group(attribute_name + pp.Suppress('=') + attribute_value).setParseAction(parse_tag_attribute)
+tag_dict = pp.nestedExpr('{', '}').setParseAction(
+    lambda s, l, t: ast.parse(s[l:]).body[0].value
+)
+tag_grammar = (
+    tag_def
+    + pp.Group(pp.ZeroOrMore(tag_class ^ tag_id))
+    + (tag_dict ^ pp.Group(pp.ZeroOrMore(tag_attribute)))
+)
+def parse_tag(node_string):
+    node, attrs_keys, node_attrs = tag_grammar.parseString(node_string)
+    node_attrs = None if not node_attrs else node_attrs
+    node_attrs = node_attrs[0] if isinstance(node_attrs, pp.ParseResults) else node_attrs
+    return node, node_attrs
+
+
+def dump_ast(node, tabs=0):
+    space = ' ' * tabs
+    print(space, '--', node, getattr(node, 'lineno', None), getattr(node, 'col_offset', None))
+    if hasattr(node, '_fields'):
+        for field in node._fields:
+            print(space, field, dump_ast(getattr(node, field), tabs + 1))
+    elif isinstance(node, list):
+        for node_ in node:
+            print(space, dump_ast(node_, tabs + 1))
+
+
+NoValue = object()
+def tag_attribute(name, value):
+    if value is NoValue:
+        return escape(name)
+    return u'%s="%s"' % (escape(name), escape(value))
+
+
 class Tag:
-    def __init__(self, name):
+    def __init__(self, name, **kwargs):
         self.name = name
+        self.kwargs = kwargs
 
     def start(self):
+        attributes=u' '.join(tag_attribute(name, value) for name, value in self.kwargs.items())
+        if attributes:
+            return '<{name} {attributes}>'.format(name=self.name, attributes=attributes)
         return '<{}>'.format(self.name)
 
     def stop(self):
         return '</{}>'.format(self.name)
 
 
-def convert_to_ast(idented_tree, order=0):
+def _convert_to_ast(idented_tree, order=0):
     elements = []
     for lineno, node_string, childs in idented_tree:
-        ast_childs = convert_to_ast(childs, order=order)
+        ast_childs = _convert_to_ast(childs, order=order)
         if node_string.startswith('-'):
             if node_string.endswith(':'):
                 node_string = node_string + ' pass'
@@ -67,24 +127,32 @@ def convert_to_ast(idented_tree, order=0):
             res.lineno = lineno
             res.col_offset = 0
             if childs and isinstance(res.body[0], ast.Pass):
-                res.body = ast_childs or []
-            elements.append(res)
+                res.body = list(ast_childs) or []
+            yield res
             continue
-        node, *args = node_string.split(' ', 1)
+        if node_string.startswith('"'):
+            yield ast.Expr(
+                value=ast.Yield(
+                    value=ast.Str(s=node_string)
+                )
+            )
+            continue
+        node, node_attrs = parse_tag(node_string)
         line_n_offset = {'lineno': lineno + 1, 'col_offset': 0}
-        node_name = 'name_%s_%s' % (lineno, order)
-        elements.append(ast.Assign(
+        node_name = '%s_%s_%s' % (node, lineno, order)
+        yield ast.Assign(
             targets=[ast.Name(id=node_name, ctx=ast.Store())],
             value=ast.Call(
                 func=ast.Name(id='Tag', ctx=ast.Load()),
                 args=[ast.Str(node, **line_n_offset)],
                 keywords=[],
                 starargs=None,
-                kwargs=None,
+                kwargs=node_attrs,
+                **line_n_offset
             ),
             **line_n_offset
-        ))
-        elements.append(ast.Expr(
+        )
+        yield ast.Expr(
             value=ast.Yield(
                 value=ast.Call(func=ast.Attribute(
                         value=ast.Name(id=node_name, ctx=ast.Load()),
@@ -94,9 +162,9 @@ def convert_to_ast(idented_tree, order=0):
                 ),
             ),
             **line_n_offset
-        ))
-        elements.extend(ast_childs)
-        elements.append(ast.Expr(
+        )
+        yield from ast_childs
+        yield ast.Expr(
             value=ast.Yield(
                 value=ast.Call(func=ast.Attribute(
                     value=ast.Name(id=node_name, ctx=ast.Load()),
@@ -104,8 +172,11 @@ def convert_to_ast(idented_tree, order=0):
                 ),
             ),
             **line_n_offset
-        ))
-    return elements
+        )
+
+def convert_to_ast(idented_tree, order=0):
+    return list(_convert_to_ast(idented_tree, order))
+
 
 
 def convert_internal_ast_to_python_code(idented_tree):
@@ -114,10 +185,10 @@ def convert_internal_ast_to_python_code(idented_tree):
             name='render',
             args=ast.arguments(
                 args=[],
-                vararg=None,
+                vararg=ast.arg(arg='arguments'),
                 kwonlyargs=[],
                 kw_defaults=[],
-                kwarg=None,
+                kwarg=ast.arg(arg='options'),
                 defaults=[],
             ),
             body=convert_to_ast(idented_tree),
@@ -127,6 +198,7 @@ def convert_internal_ast_to_python_code(idented_tree):
         lineno=1, col_offset=0,
     )
     result_ast = ast.fix_missing_locations(result_ast)
+    # dump_ast(result_ast)
     return compile(result_ast, 'test.pyml', 'exec')
 
 
@@ -180,15 +252,16 @@ class TopLevelLoader(object):
 
 
 class PymlLoader(object):
-    def __init__(self, filename):
+    def __init__(self, filename, tag_class=Tag):
         self.filename = filename
+        self.tag_class = tag_class
 
     def load_module(self, fullname):
-        print(self.filename, fullname)
+        # print(self.filename, fullname)
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__loader__ = self
         mod.__package__ = '.'.join(fullname.split('.')[:-1])
-        mod.__dict__['Tag'] = Tag
+        mod.__dict__['Tag'] = self.tag_class
         code = convert_internal_ast_to_python_code(parse_file(self.filename))
         exec(code, mod.__dict__)
         return mod
@@ -197,4 +270,5 @@ class PymlLoader(object):
 if __name__ == '__main__':
     sys.meta_path.insert(0, PymlFinder('.'))
     import backslant_hook.templates.test as test
-    print(list(test.render()))
+    for chunk in test.render(title='The Incredible'):
+        print(chunk)
