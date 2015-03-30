@@ -61,6 +61,7 @@ def create_parser():
         ^ pp.dblQuotedString()
         ^ pp.nestedExpr()
         ^ pp.nestedExpr('[', ']')
+        ^ pp.Word(html_chars)
     ).setParseAction(parse_attribute_value)
 
     def parse_tag_attribute(s, l, t):
@@ -170,7 +171,7 @@ def _convert_to_ast(idented_tree, order=0):
         if node_string.startswith('"'):
             yield ast.Expr(
                 value=ast.Yield(
-                    value=ast.Str(s=node_string[1:])
+                    value=ast.Str(s=node_string[1:].strip())
                 )
             )
             continue
@@ -264,6 +265,7 @@ class Tag:
     def stop(self):
         if self.has_stop:
             return Markup('</{}>'.format(self.name))
+        return ''
 
 
 def convert_to_function(code):
@@ -286,7 +288,7 @@ class PymlFinder(object):
         if not fullname.startswith(self.hook):
             return
         if fullname == self.hook:
-            return ModuleSpec(fullname, TopLevelLoader(fullname, path), origin=path, is_package=True)
+            return ModuleSpec(fullname, TopLevelLoader(fullname, self.basepath), origin=path, is_package=True)
         segments = fullname.split('.')[1:] # strip hook
         path = op.join(self.basepath, *segments)
         if op.isdir(path):
@@ -311,6 +313,7 @@ class TopLevelLoader(object):
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__loader__ = self
         mod.__package__ = fullname
+        mod.__file__ = self.path
         mod.__path__ = []
         return mod
 
@@ -325,6 +328,7 @@ class PymlLoader(object):
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__loader__ = self
         mod.__package__ = '.'.join(fullname.split('.')[:-1])
+        mod.__file__ = self.filename
         mod.__dict__['Tag'] = self.tag_class
         code = convert_internal_ast_to_python_code(parse_file(self.filename), filename=self.filename)
         exec(code, mod.__dict__)

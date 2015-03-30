@@ -1,0 +1,16 @@
+!doctype/ html
+html
+    head
+        - a = 'pam'
+        title a=a
+            - yield options.get('title', 'empty')
+    body
+        h1
+            - yield options.get('title', 'empty')
+        div.content
+            - content = options.get('content')
+            - if content:
+                - yield from content()
+        div.footer
+            " Backslant
+            " © 2015
