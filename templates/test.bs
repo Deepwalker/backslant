@@ -31,4 +31,9 @@ html
 
         - if True:
             "conditional"
+        - elif 'title' in options:
+            p
+                "whoa"
+        - else
+            "WAT?"
         - yield from ku('there')

@@ -47,51 +47,57 @@ def parse_file(filename):
     return idented_tree
 
 
-html_chars = pp.alphanums + '-_'
-tag_def = pp.Word(html_chars)
-tag_class = pp.Combine(pp.Literal('.') + pp.Word(html_chars))
-tag_id = pp.Combine(pp.Literal('#') + pp.Word(html_chars))
-attribute_name = pp.Word(html_chars)
+def create_parser():
+    html_chars = pp.alphanums + '-_'
+    tag_def = pp.Word(html_chars)
+    tag_class = pp.Combine(pp.Literal('.') + pp.Word(html_chars))
+    tag_id = pp.Combine(pp.Literal('#') + pp.Word(html_chars))
+    attribute_name = pp.Word(html_chars)
 
-def parse_attribute_value(s, l, t):
-    return ast.parse(s[t._original_start:t._original_end]).body[0].value
-attribute_value = pp.originalTextFor(
-      pp.sglQuotedString()
-    ^ pp.dblQuotedString()
-    ^ pp.nestedExpr()
-    ^ pp.nestedExpr('[', ']')
-).setParseAction(parse_attribute_value)
+    def parse_attribute_value(s, l, t):
+        return ast.parse(s[t._original_start:t._original_end]).body[0].value
+    attribute_value = pp.originalTextFor(
+          pp.sglQuotedString()
+        ^ pp.dblQuotedString()
+        ^ pp.nestedExpr()
+        ^ pp.nestedExpr('[', ']')
+    ).setParseAction(parse_attribute_value)
 
-def parse_tag_attribute(s, l, t):
-    return ast.Dict(
-        keys=[ast.Str(s=str(k)) for k, v in t],
-        values=[v for k, v in t]
+    def parse_tag_attribute(s, l, t):
+        return ast.Dict(
+            keys=[ast.Str(s=str(k)) for k, v in t],
+            values=[v for k, v in t]
+        )
+    tag_attribute = pp.Group(attribute_name + pp.Suppress('=') + attribute_value).setParseAction(parse_tag_attribute)
+    tag_dict = pp.nestedExpr('{', '}').setParseAction(
+        lambda s, l, t: ast.parse(s[l:]).body[0].value
     )
-tag_attribute = pp.Group(attribute_name + pp.Suppress('=') + attribute_value).setParseAction(parse_tag_attribute)
-tag_dict = pp.nestedExpr('{', '}').setParseAction(
-    lambda s, l, t: ast.parse(s[l:]).body[0].value
-)
-tag_grammar = (
-    tag_def
-    + pp.Group(pp.ZeroOrMore(tag_class ^ tag_id))
-    + (tag_dict ^ pp.Group(pp.ZeroOrMore(tag_attribute)))
-)
-def parse_tag(node_string):
-    node, attrs_keys, node_attrs = tag_grammar.parseString(node_string)
-    node_attrs = None if not node_attrs else node_attrs
-    node_attrs = node_attrs[0] if isinstance(node_attrs, pp.ParseResults) else node_attrs
-    return node, node_attrs
+    tag_grammar = (
+        tag_def
+        + pp.Group(pp.ZeroOrMore(tag_class ^ tag_id))
+        + (tag_dict ^ pp.Group(pp.ZeroOrMore(tag_attribute)))
+    )
+    def parse_tag(node_string):
+        node, attrs_keys, node_attrs = tag_grammar.parseString(node_string)
+        node_attrs = None if not node_attrs else node_attrs
+        node_attrs = node_attrs[0] if isinstance(node_attrs, pp.ParseResults) else node_attrs
+        return node, node_attrs
+    return parse_tag
+
+parse_tag = create_parser()
 
 
 def dump_ast(node, tabs=0):
-    space = ' ' * tabs
+    space = '  ' * tabs
     print(space, '--', node, getattr(node, 'lineno', None), getattr(node, 'col_offset', None))
     if hasattr(node, '_fields'):
         for field in node._fields:
-            print(space, field, dump_ast(getattr(node, field), tabs + 1))
+            if getattr(node, field):
+                print(space, '=', field)
+                dump_ast(getattr(node, field), tabs + 1)
     elif isinstance(node, list):
         for node_ in node:
-            print(space, dump_ast(node_, tabs + 1))
+            dump_ast(node_, tabs + 1)
 
 
 NoValue = object()
@@ -117,18 +123,36 @@ class Tag:
 
 
 def _convert_to_ast(idented_tree, order=0):
-    elements = []
+    node_with_else = None # track if and for
     for lineno, node_string, childs in idented_tree:
         ast_childs = _convert_to_ast(childs, order=order)
+        elif_ = False
         if node_string.startswith('-'):
-            if node_string.endswith(':'):
-                node_string = node_string + ' pass'
-            res = ast.parse(node_string[1:].strip(), filename='text.pyml').body[0]
-            res.lineno = lineno
-            res.col_offset = 0
-            if childs and isinstance(res.body[0], ast.Pass):
-                res.body = list(ast_childs) or []
-            yield res
+            node_string = node_string[1:].strip()
+            if node_string == 'else':
+                node_with_else.orelse = list(ast_childs) or []
+            else:
+                if node_string.startswith('elif '):
+                    node_string = node_string[2:]
+                    elif_ = True
+                else:
+                    # swap out (if|for)node
+                    node_with_else = None
+                if node_string.endswith(':'):
+                    node_string = node_string + ' pass'
+                res = ast.parse(node_string, filename='text.pyml').body[0]
+                res.lineno = lineno + 1
+                res.col_offset = 0
+                if not elif_ and isinstance(res, (ast.If, ast.For)):
+                    node_with_else = res
+                if childs and isinstance(res.body[0], ast.Pass):
+                    res.body = list(ast_childs) or []
+                ast.fix_missing_locations(res)
+                if elif_:
+                    node_with_else.orelse = [res]
+                    node_with_else = res
+                else:
+                    yield res
             continue
         if node_string.startswith('"'):
             yield ast.Expr(
@@ -148,7 +172,6 @@ def _convert_to_ast(idented_tree, order=0):
                 keywords=[],
                 starargs=None,
                 kwargs=node_attrs,
-                **line_n_offset
             ),
             **line_n_offset
         )
@@ -179,16 +202,16 @@ def convert_to_ast(idented_tree, order=0):
 
 
 
-def convert_internal_ast_to_python_code(idented_tree):
+def convert_internal_ast_to_python_code(idented_tree, filename='<unknown>'):
     result_ast = ast.Module(
         body=[ast.FunctionDef(
             name='render',
             args=ast.arguments(
                 args=[],
-                vararg=ast.arg(arg='arguments'),
+                vararg=ast.arg(arg='arguments', annotation=None),
                 kwonlyargs=[],
                 kw_defaults=[],
-                kwarg=ast.arg(arg='options'),
+                kwarg=ast.arg(arg='options', annotation=None),
                 defaults=[],
             ),
             body=convert_to_ast(idented_tree),
@@ -199,7 +222,7 @@ def convert_internal_ast_to_python_code(idented_tree):
     )
     result_ast = ast.fix_missing_locations(result_ast)
     # dump_ast(result_ast)
-    return compile(result_ast, 'test.pyml', 'exec')
+    return compile(result_ast, filename, 'exec')
 
 
 def convert_to_function(code):
@@ -262,7 +285,7 @@ class PymlLoader(object):
         mod.__loader__ = self
         mod.__package__ = '.'.join(fullname.split('.')[:-1])
         mod.__dict__['Tag'] = self.tag_class
-        code = convert_internal_ast_to_python_code(parse_file(self.filename))
+        code = convert_internal_ast_to_python_code(parse_file(self.filename), filename=self.filename)
         exec(code, mod.__dict__)
         return mod
 

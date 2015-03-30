@@ -18,8 +18,18 @@ So, with this principles in mind, you can try this proof of concept thing, due i
     sys.meta_path.insert(0, backslant.PymlFinder('./templates', hook='backslant_import'))
     from backslant_import.home import index
 
-    for chunk in index.render():
+    for chunk in index.render(title='The Real Thing'):
         print(chunk)
 
+And templates/home/index.bs:
 
-I will complete feture set soon, stay tuned. Pssst, we will have ruby-like blocks, dont tell anyone.
+    html
+        head
+            title
+                - yield options['title']
+        body
+            div.content
+                h1
+                    "Header"
+
+I will complete feture set soon, stay tuned.
