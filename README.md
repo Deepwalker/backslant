@@ -28,8 +28,8 @@ And templates/home/index.bs:
             title
                 - yield options['title']
         body
-            div.content
-                h1
+            div.content#content
+                h1#header
                     "Header"
 
 You can define a function:

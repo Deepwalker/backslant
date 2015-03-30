@@ -78,8 +78,21 @@ def create_parser():
     )
     def parse_tag(node_string):
         node, attrs_keys, node_attrs = tag_grammar.parseString(node_string)
+        classes = []
+        id_ = None
+        for attr in attrs_keys:
+            if attr.startswith('.'):
+                classes.append(attr[1:])
+            else:
+                id_ = attr[1:]
         node_attrs_keys = []
         node_attrs_values = []
+        if id_:
+            node_attrs_keys.append(ast.Str(s='id'))
+            node_attrs_values.append(ast.Str(s=id_))
+        if classes:
+            node_attrs_keys.append(ast.Str(s='class'))
+            node_attrs_values.append(ast.Str(s=' '.join(classes)))
         single_attrs = []
         for node_attr in node_attrs:
             if isinstance(node_attr, ast.Dict):

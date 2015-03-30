@@ -16,7 +16,7 @@ html
         script
             :noescape
                 console.log('1')
-    body.content#body ng-app="TestApplication"
+    body.content.body#body ng-app="TestApplication"
         - yield from test2.render(**options)
         h1 class="project"
             "kuku
