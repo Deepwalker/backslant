@@ -3,37 +3,43 @@
     h2
         - yield text
     p
-        "Awesome"
+        "Awesome
 
-doctype html
+!doctype/ html
 html
     head class=('aaa' if test2 else 'bbb')
         title
             - yield "magic is a pony: " + options['title']
+        style type="text/css"
+            :noescape
+                * { font-family: 'Helvetica'; }
+        script
+            :noescape
+                console.log('1')
     body.content#body ng-app="TestApplication"
         - yield from test2.render(**options)
         h1 class="project"
-            "kuku"
+            "kuku
         p {'krom-pom' + '_': 'tom tom' + ' ' + 'tam tam'}
-            "colors of the magic"
+            "colors of the magic
         div
             table
                 tbody
                     tr
                         td
-                            "magic"
+                            "magic
         div
-            "content"
+            "content
             - for i in range(2):
                 div class=("cls_{}".format(str(i)))
                     span
                         - yield "Common"
 
         - if True:
-            "conditional"
+            "conditional
         - elif 'title' in options:
             p
-                "whoa"
+                "whoa
         - else
-            "WAT?"
+            "WAT?
         - yield from ku('there')
