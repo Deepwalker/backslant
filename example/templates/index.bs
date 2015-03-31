@@ -1,11 +1,10 @@
 - from . import base
 
-- def content():
-    h2
-        " Index page
-    div
-        - for i in range(10):
-            p
-                - yield "Paragraph {}".format(i)
-
-- yield from base.render(content=content, **options)
+:call base.render(**options)
+    :content
+        h2
+            " Index page
+        div
+            - for i in range(10):
+                p
+                    - yield "Paragraph {}".format(i)

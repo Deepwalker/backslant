@@ -58,7 +58,7 @@ base.bs:
         h1 {'class': ' '.join(['main', 'content'], 'ng-app': 'Application')
             " Page Header
         div.content
-            - yield from options['content_func']()
+            - yield from options['content_block']()
         div.footer
             " Backslant © 2015
 
@@ -69,13 +69,24 @@ index.bs:
         - for i in range(10):
             p
                 - yield 'Paragraph {}'.format(i)
-    - yield from base.render(content_func=content)
+    - yield from base.render(content_block=content)
 
 I think about adding something like ruby blocks or something to made this a bit more simpler, but
 what can be simple then functions define and call?
+
+But we have syntax sugar for this:
+
+    :call base.render(*options)
+        :content_block
+            - for i in range(10):
+                p
+                    - yield 'Paragraph {}'.format(i)
+        :footer_block
+            p
+                " Index page
 
 Arguments - you can use arg=`parentised python expression or variable name` or `tag.class {'a': 5, 'b': ' '.join(options.classes)}` form.
 
 I have completed examples with flask and http.server in examples folder. And you can compare perfomance with jinja2. Its almost equal.
 
-I will complete feture set soon, stay tuned.
+I will complete feature set soon, stay tuned.

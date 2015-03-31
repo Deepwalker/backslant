@@ -144,6 +144,10 @@ def _to_string(items):
 def _convert_to_ast(idented_tree, order=0):
     node_with_else = None # track if and for
     for lineno, node_string, childs in idented_tree:
+        # case for comments
+        if node_string.startswith('#'):
+            continue
+        # case for noescaped block
         if node_string == ':noescape':
             s = _to_string(childs)
             yield ast.Expr(
@@ -152,7 +156,41 @@ def _convert_to_ast(idented_tree, order=0):
                 )
             )
             continue
+        # load child nodes
         ast_childs = _convert_to_ast(childs, order=order)
+        # Case for call with callbacks
+        if node_string.startswith(':call '):
+            node = ast.parse(node_string[6:])
+            call = node.body[0].value
+            for child in ast_childs:
+                if not isinstance(child, ast.FunctionDef):
+                    raise ValueError('{} only function defs are allowed under :call directive'.format(lineno))
+                yield child
+                name = child.name
+                call.keywords.append(
+                    ast.keyword(arg=name, value=ast.Name(id=name, ctx=ast.Load()))
+                )
+            yield ast.Expr(value=ast.YieldFrom(value=call))
+            continue
+        # and define this callbacks
+        if node_string.startswith(':'):
+            callback_name = node_string[1:]
+            yield ast.FunctionDef(
+                name=callback_name,
+                args=ast.arguments(
+                    args=[],
+                    vararg=None,
+                    kwonlyargs=[],
+                    kw_defaults=[],
+                    kwarg=None,
+                    defaults=[],
+                ),
+                body=list(ast_childs),
+                decorator_list=[],
+                returns=None,
+            )
+            continue
+        # case for python code
         elif_ = False
         if node_string.startswith('-'):
             node_string = node_string[1:].strip()
@@ -181,6 +219,7 @@ def _convert_to_ast(idented_tree, order=0):
                 else:
                     yield res
             continue
+        # case for strings
         if node_string.startswith('"'):
             yield ast.Expr(
                 value=ast.Yield(
@@ -188,6 +227,7 @@ def _convert_to_ast(idented_tree, order=0):
                 )
             )
             continue
+        # case for tag
         node, single_attrs, node_attrs = parse_tag(node_string)
         line_n_offset = {'lineno': lineno + 1, 'col_offset': 0}
         node_name = '%s_%s_%s' % (node, lineno, order)

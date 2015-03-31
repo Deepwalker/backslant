@@ -20,6 +20,4 @@ def j2():
     return render_template('index.html')
 
 if __name__ == '__main__':
-    # for mod in sys.modules.values():
-    #     print(getattr(mod, '__file__', ''))
     app.run(host='0.0.0.0', port=9000)

@@ -1,9 +1,10 @@
 - from . import test2
-- def ku(text):
+- def ku(text, callback=None):
     h2
         - yield text
     p
         "Awesome
+        - yield from callback()
 
 !doctype/ html
 html
@@ -35,11 +36,14 @@ html
                     span
                         - yield "Common"
 
-        - if True:
+        - if False:
             "conditional
         - elif 'title' in options:
             p
                 "whoa
         - else
             "WAT?
-        - yield from ku('there')
+        :call ku('there')
+            :callback
+                p
+                    "Ku ku content
