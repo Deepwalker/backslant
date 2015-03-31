@@ -3,13 +3,14 @@ Backslant
 
 Is a template engine built in completely other way then before.
 
-First - you can use all python and more - you must use it if you want somwthing more
+First - you can use all python and you must use it if you want something more
 then just tags.
 
 Second - it completely iterative. You can feed iterators or generators as input and get iterative output.
 
 Third - it works through imports. If you want to get template just import it and use. If you want include
 other template - import it. If you want template in some dir, import it! Like ```from . import other_template```.
+Use absolute or relative imports.
 
 So, with this principles in mind, you can try this proof of concept thing, due it is not complete:
 
@@ -57,7 +58,7 @@ base.bs:
         h1 {'class': ' '.join(['main', 'content'], 'ng-app': 'Application')
             " Page Header
         div.content
-            - yield from options['content_func']
+            - yield from options['content_func']()
         div.footer
             " Backslant © 2015
 
@@ -75,6 +76,6 @@ what can be simple then functions define and call?
 
 Arguments - you can use arg=`parentised python expression or variable name` or `tag.class {'a': 5, 'b': ' '.join(options.classes)}` form.
 
-We have complete examples with flask and http.server in examples folder. And you can compare perfomance with jinja2. Its almost equal.
+I have completed examples with flask and http.server in examples folder. And you can compare perfomance with jinja2. Its almost equal.
 
 I will complete feture set soon, stay tuned.

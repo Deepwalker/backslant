@@ -1,4 +1,6 @@
+aiohttp==0.15.0      # aiohttp << requirements file
 argh==0.26.1         # argh>=0.24.1 << watchdog << requirements file
+cython==0.22         # cython << requirements file
 flask==0.10.1        # flask << requirements file
 itsdangerous==0.24   # itsdangerous>=0.21 << flask << requirements file
 jinja2==2.7.3        # Jinja2>=2.4 << flask << requirements file

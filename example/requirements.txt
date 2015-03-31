@@ -1,3 +1,5 @@
 flask
 watchdog
 pyparsing
+cython
+aiohttp
