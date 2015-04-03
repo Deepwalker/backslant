@@ -3,8 +3,9 @@
 :call base.render(**options)
     :content
         h2
-            " Index page
+            | Index page
         div
             - for i in range(10):
                 p
                     - yield "Paragraph {}".format(i)
+        custom-tag#identifier

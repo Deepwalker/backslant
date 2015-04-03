@@ -1,9 +1,12 @@
-!doctype/ html
+!doctype/(html)
 html
     head
         - a = 'pam'
-        title a=a
+        title(a="a")
             - yield options.get('title', 'empty')
+        style """
+            there
+        """
     body
         h1
             - yield options.get('title', 'empty')
@@ -12,5 +15,5 @@ html
             - if content:
                 - yield from content()
         div.footer
-            " Backslant
-            " © 2015
+            | Backslant
+            | © 2015

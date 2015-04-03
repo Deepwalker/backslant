@@ -22,7 +22,7 @@ setupconf = dict(
     long_description=read('README.md'),
     keywords='template ast jinja2 mako',
 
-    install_requires=['pyparsing', 'markupsafe'],
+    install_requires=['funcparserlib', 'pyparsing', 'markupsafe'],
     py_modules=['backslant'],
     classifiers=[
         'Intended Audience :: Developers',

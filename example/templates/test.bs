@@ -1,49 +1,42 @@
 - from . import test2
 - def ku(text, callback=None):
-    h2
+    h2(a='5')
         - yield text
-    p
-        "Awesome
+    p "Awesome"
         - yield from callback()
 
-!doctype/ html
+!doctype/(html)
 html
-    head class=('aaa' if test2 else 'bbb')
+    head(class=('aaa' if test2 else 'bbb'))
         title
             - yield "magic is a pony: " + options['title']
-        style type="text/css"
-            :noescape
+        style(type="text/css") """
                 * { font-family: 'Helvetica'; }
-        script
-            :noescape
-                console.log('1')
-    body.content.body#body ng-app="TestApplication"
+        """
+        script """
+            console.log('1')
+        """
+    body.content.body#body(ng-app="TestApplication")
         - yield from test2.render(**options)
-        h1 class="project"
-            "kuku
+        h1(class="project")
+            | kuku
         p {'krom-pom' + '_': 'tom tom' + ' ' + 'tam tam'}
-            "colors of the magic
+            | colors of the magic
         div
             table
                 tbody
                     tr
-                        td
-                            "magic
+                        td "magic"
         div
-            "content
+            "content"
             - for i in range(2):
-                div class=("cls_{}".format(str(i)))
+                div(class=("cls_{}".format(str(i))))
                     span
                         - yield "Common"
 
         - if False:
-            "conditional
-        - elif 'title' in options:
-            p
-                "whoa
-        - else
-            "WAT?
+            "conditional"
         :call ku('there')
             :callback
                 p
-                    "Ku ku content
+                    "Ku ku content"
