@@ -13,17 +13,17 @@ def read(fname):
 
 setupconf = dict(
     name='backslant',
-    version='0.1.2',
+    version='0.2.0',
     license='BSD',
     url='https://github.com/Deepwalker/backslant/',
     author='Deepwalker',
     author_email='krivushinme@gmail.com',
     description='Python template engine.',
     long_description=read('README.md'),
-    keywords='template ast jinja2 mako',
+    keywords='template html ast jinja2 mako slim plim',
 
-    install_requires=['funcparserlib', 'pyparsing', 'markupsafe'],
-    py_modules=['backslant'],
+    install_requires=['funcparserlib', 'markupsafe'],
+    packages=['backslant'],
     classifiers=[
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',

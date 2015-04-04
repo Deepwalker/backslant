@@ -1,136 +1,24 @@
 import sys
 import ast
-import token
 from io import StringIO
-from tokenize import generate_tokens
 
-import pyparsing as pp
 from markupsafe import Markup, escape
-from funcparserlib.parser import many, maybe, skip, some, forward_decl, NoParseError
+from funcparserlib.parser import NoParseError
 
-
-class Token(object):
-    def __init__(self, code, value, start=(0, 0), stop=(0, 0), line=''):
-        self.code = code
-        self.value = value
-        self.start = start
-        self.stop = stop
-        self.line = line
-        self.type = token.tok_name[self.code]
-
-    def __unicode__(self):
-        pos = '-'.join('%d,%d' % x for x in [self.start, self.stop])
-        return "%s %s '%s'" % (pos, self.type, self.value)
-
-    def __repr__(self):
-        return 'Token(%r, %r, %r, %r, %r)' % (
-            self.type, self.value, self.start, self.stop, self.line)
-
-    def __eq__(self, other):
-        return (self.code, self.value) == (other.code, other.value)
-
-
-def tokenize(io):
-    'str -> [Token]'
-    # print list(unicode(Token(*t))
-    #     for t in generate_tokens(StringIO(s).readline)
-    #     if t[0] not in [NL, token.NEWLINE])
-    return [Token(*t) for t in generate_tokens(io)]
-
-
-def func_parser():
-    def recursive_join(toks):
-        def inner(tks):
-            if tks is None:
-                return
-            if isinstance(tks, str):
-                yield tks
-                return
-            if isinstance(tks, Token):
-                yield tks.value
-                return
-            for tok in tks:
-                if isinstance(tok, Token):
-                    yield tok.value
-                else:
-                    yield from inner(tok)
-        return ''.join(inner(toks))
-
-    def prn(tks):
-        print(repr(tks))
-        return tks
-
-    def combine(tks):
-        def get_tok(toks, index=0):
-            if isinstance(toks, Token):
-                return toks
-            elif isinstance(toks, (tuple, list)):
-                toks = [t for t in toks if t]
-                return get_tok(toks[index])
-        if not tks:
-            return ''
-        first = get_tok(tks)
-        last = get_tok(tks, index=-1)
-        return first.line[first.start[1]:last.stop[1]]
-
-    sometok = lambda s: some(lambda tok: tok.value == s)
-    sometype = lambda t: some(lambda tok: tok.type == t)
-    no_dent = some(lambda tok: tok.type not in ['INDENT', 'DEDENT', 'NEWLINE'])
-    nodent = lambda tok: tok.type not in ['INDENT', 'DEDENT', 'NEWLINE']
-    newline = skip(sometok('\n'))
-    name = sometype('NAME')
-    python_name = name + many(sometok('.') + name)
-    to_end_of_line = many(no_dent) >> combine
-    take_value = lambda tok: tok.value
-
-    def paren_match(start, end=None):
-        if not end:
-            end = start
-        parens = forward_decl()
-        no_paren_dent_nl = some(lambda tok: nodent(tok) and not tok.value in (start, end))
-        parens.define(sometok(start) + many(no_paren_dent_nl | parens) + sometok(end))
-        return parens
-
-    python_call = (sometok('-') + to_end_of_line) >> (lambda toks: ('python', toks[0].start, toks[1]))
-    macro = (sometok(':') + sometype('NAME') + to_end_of_line) >> (lambda toks: ('macro', toks[0].start, toks[1].value, toks[2]))
-    string = (sometok('|') + many(no_dent)) >> (lambda toks: ('string', toks[0].start, toks[0].line.strip()))
-    string = string | (sometype('STRING') >> (lambda tok: ('string', tok.start, tok.value)))
-    text = sometype('STRING') >> take_value
-    # HTML attr
-    html_name = (name + many(sometok('-') + name))
-    html_name_str = html_name >> combine
-    attribute_value = (sometype('STRING') >> take_value) | ((paren_match('(', ')') | python_name) >> combine)
-    single_attr = html_name_str
-    pair_attr = (html_name_str + sometok('=') + attribute_value) >> (lambda toks: (toks[0], toks[2]))
-    attribute = pair_attr | single_attr
-    attributes = (
-        ((sometok('(') + many(attribute) + sometok(')')) >> (lambda toks: toks[1]))
-        | (paren_match('{', '}') >> combine)
-    )
-    tag_class = (sometok('.') + html_name_str) >> (lambda toks: ('class', toks[1]))
-    tag_id = sometype('COMMENT') >> (lambda tok: ('id', tok.value))
-    tag_name = (maybe(sometok('!')) + html_name + maybe(sometok('/'))) >> combine
-    tag = tag_name + many(tag_class | tag_id) + maybe(attributes) + maybe(text) >> (lambda toks: ('tag', (0, 0), toks))
-
-    definition = (tag | python_call | macro | string)
-    line = forward_decl()
-    block = (skip(sometype('INDENT')) + many(line) + skip(sometype('DEDENT')))
-    line.define(maybe(definition) + newline + maybe(block))
-    parser = (many(line) + skip(sometype('ENDMARKER')))
-
-    return parser
+from .lexer import idented_tokenizer
+from .parser import bs_parser
 
 
 class AstParsers:
-    def string(text, childs=None, line_n_offset={}):
+    def string(text, childs=None, line_n_offset={}, parse_ast=None, filename='<backslant>'):
         yield ast.Expr(
             value=ast.Yield(
-                value=ast.Str(s=text),
+                value=ast.Str(s=text.strip(text[0])),
             ),
             **line_n_offset
         )
 
-    def tag(args, childs=None, line_n_offset={}):
+    def tag(args, childs=None, line_n_offset={}, parse_ast=None, filename='<backslant>'):
         name, classes_n_id, arguments, text = args
         single_attrs = []
         pair_keys = []
@@ -152,14 +40,14 @@ class AstParsers:
             pair_keys.append('id')
             pair_vals.append(ast.Str(s=ids[-1]))
         if isinstance(arguments, str):
-            kwargs = ast.parse(arguments, filename='<filename>').body[0].value
+            kwargs = ast.parse(arguments, filename=filename).body[0].value
         else:
             for arg in (arguments or []):
                 if isinstance(arg, str):
                     single_attrs.append(ast.Str(s=arg))
                 else:
                     pair_keys.append(arg[0])
-                    pair_vals.append(ast.parse(arg[1], filename='<filename>').body[0].value)
+                    pair_vals.append(ast.parse(arg[1], filename=filename).body[0].value)
         # _tag_start(name, *single_attrs, **attributes)
         if pair_keys and pair_vals:
             for key, value in zip(pair_keys, pair_vals):
@@ -191,33 +79,115 @@ class AstParsers:
             **line_n_offset
         )
 
-    def python(string, childs=None, line_n_offset={}):
-        if string.endswith(':'):
-            string = string + ' pass'
-        res = ast.parse(string, filename='text.pyml').body[0]
-        res.lineno = line_n_offset['lineno']
-        res.col_offset = line_n_offset['col_offset']
-        if childs and getattr(res, 'body', None) and isinstance(res.body[0], ast.Pass):
-            res.body = list(childs) or []
+    def _flat_addons(addons):
+        for addon in addons:
+            if isinstance(addon, list):
+                for subaddon in addon:
+                    if subaddon:
+                        yield subaddon
+            elif addon:
+                yield addon
+
+    def python(string, addons, childs=None, line_n_offset={}, parse_ast=None, filename='<backslant>'):
+        if string == 'try:':
+            res = ast.Try(
+                body=list(childs),
+                handlers=[],
+                orelse=[],
+                finalbody=[],
+                **line_n_offset
+            )
+        else:
+            if string.endswith(':'):
+                string = string + ' pass'
+            res = ast.parse(string, filename=filename).body[0]
+            res.lineno = line_n_offset['lineno']
+            res.col_offset = line_n_offset['col_offset']
+            if childs and getattr(res, 'body', None) and isinstance(res.body[0], ast.Pass):
+                res.body = list(childs)
+        elsenode = res
+        for addon in AstParsers._flat_addons(addons):
+            # print('addon', addon, addons)
+            (typ, (ln, off), s), block = addon
+            childs = list(parse_ast(block))
+            if s == 'else:':
+                elsenode.orelse = childs
+            elif s.startswith('elif'):
+                parsed = ast.parse(s[2:] + 'pass', filename=filename).body[0]
+                parsed.body = childs
+                parsed.lineno = ln
+                parsed.col_offset = off
+                elsenode.orelse = [parsed]
+                elsenode = parsed
+            elif s == 'finally:':
+                elsenode.finalbody = [childs]
+            elif s.startswith('except'):
+                except_hndl = ast.parse('try: pass\n' + s + 'pass', filename=filename).body[0].handlers[0]
+                except_hndl.body = childs
+                except_hndl.lineno = ln
+                except_hndl.col_offset = off
+                elsenode.handlers = (elsenode.handlers or []) + [except_hndl]
         ast.fix_missing_locations(res)
         yield res
+
+    def macro(name, *arg, childs=None, line_n_offset={}, parse_ast=None, filename='<backslant>'):
+        if name == 'call':
+            if not arg:
+                raise ValueError('{} :call need function call as argument'.format(lineno))
+            arg = arg[0]
+            node = ast.parse(arg.strip())
+            call = node.body[0].value
+            for child in childs:
+                if not isinstance(child, ast.FunctionDef):
+                    raise ValueError('{} only function defs are allowed under :call directive'.format(lineno))
+                yield child
+                name = child.name
+                call.keywords.append(
+                    ast.keyword(arg=name, value=ast.Name(id=name, ctx=ast.Load()))
+                )
+            yield ast.Expr(value=ast.YieldFrom(value=call))
+        else:
+            yield ast.FunctionDef(
+                name=name,
+                args=ast.arguments(
+                    args=[],
+                    vararg=None,
+                    kwonlyargs=[],
+                    kw_defaults=[],
+                    kwarg=None,
+                    defaults=[],
+                ),
+                body=list(childs),
+                decorator_list=[],
+                returns=None,
+            )
 
 
 def parse_to_ast(filename):
     def parse_ast(ast, space=0):
         if not ast:
             return
-        for line, block in ast:
+        for ast_node in ast:
+            # print('ast_node', ast_node)
+            line, block = ast_node
             if not line:
                 continue
-            line_n_offset = {'lineno': 1, 'col_offset': 0}
-            print(' ' * space, line)
+            # print(' ' * space, line)
             converter_name, (lineno, offset), *args = line
+            line_n_offset = {'lineno': lineno, 'col_offset': offset}
             converter = getattr(AstParsers, converter_name, None)
             if converter:
-                yield from converter(*args, childs=parse_ast(block, space=space + 1), line_n_offset=line_n_offset)
+                yield from converter(
+                    *args,
+                    childs=parse_ast(block, space=space + 1),
+                    line_n_offset=line_n_offset,
+                    parse_ast=parse_ast,
+                    filename=filename
+                )
+    # for tok in idented_tokenizer(open(filename).read()):
+    #     print(tok)
     try:
-        ast = func_parser().parse(tokenize(open(filename).readline))
+        ast = bs_parser.parse(list(idented_tokenizer(open(filename).read())))
     except NoParseError as e:
         print(e.__dict__)
         raise

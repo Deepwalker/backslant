@@ -1,5 +1,5 @@
 flask
 watchdog
-pyparsing
+funcparserlib
 cython
 aiohttp

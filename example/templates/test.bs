@@ -20,7 +20,7 @@ html
         - yield from test2.render(**options)
         h1(class="project")
             | kuku
-        p {'krom-pom' + '_': 'tom tom' + ' ' + 'tam tam'}
+        p{'krom-pom' + '_': 'tom tom' + ' ' + 'tam tam'}
             | colors of the magic
         div
             table
@@ -33,10 +33,18 @@ html
                 div(class=("cls_{}".format(str(i))))
                     span
                         - yield "Common"
+            - else:
+                | Yeah!
 
         - if False:
             "conditional"
+        - else:
+            "unconditional"
         :call ku('there')
             :callback
                 p
                     "Ku ku content"
+        - try:
+            - 2 / 0
+        - except:
+            div "dont divide by zero!"

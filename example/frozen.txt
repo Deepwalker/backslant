@@ -2,11 +2,11 @@ aiohttp==0.15.0      # aiohttp << requirements file
 argh==0.26.1         # argh>=0.24.1 << watchdog << requirements file
 cython==0.22         # cython << requirements file
 flask==0.10.1        # flask << requirements file
+funcparserlib==0.3.6 # funcparserlib << requirements file
 itsdangerous==0.24   # itsdangerous>=0.21 << flask << requirements file
 jinja2==2.7.3        # Jinja2>=2.4 << flask << requirements file
 markupsafe==0.23     # markupsafe << Jinja2>=2.4 << flask << requirements file
 pathtools==0.1.2     # pathtools>=0.1.1 << watchdog << requirements file
-pyparsing==2.0.3     # pyparsing << requirements file
 pyyaml==3.11         # PyYAML>=3.10 << watchdog << requirements file
 watchdog==0.8.3      # watchdog << requirements file
 werkzeug==0.10.4     # Werkzeug>=0.7 << flask << requirements file

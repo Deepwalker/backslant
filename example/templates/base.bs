@@ -5,7 +5,9 @@ html
         title(a="a")
             - yield options.get('title', 'empty')
         style """
-            there
+            * {
+                font-family: Helvetica;
+            }
         """
     body
         h1

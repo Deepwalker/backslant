@@ -30,14 +30,13 @@ And templates/home/index.bs:
                 - yield options['title']
         body
             div.content#content
-                h1#header
-                    "Header"
+                h1#header "Header"
 
 You can define a function:
 
     - def render_form(method):
         form method=method
-            input type="text" value="123"
+            input(type="text" value="123")
 
 End call it:
 
@@ -52,15 +51,14 @@ base.bs:
     !doctype/ html
     html
     head
-        title
-            " Page Title
+        title "Page Title"
     body
-        h1 {'class': ' '.join(['main', 'content'], 'ng-app': 'Application')
-            " Page Header
+        h1{'class': ' '.join(['main', 'content'], 'ng-app': 'Application'}
+            | Page Header
         div.content
             - yield from options['content_block']()
         div.footer
-            " Backslant © 2015
+            | Backslant © 2015
 
 index.bs:
 
@@ -82,8 +80,7 @@ But we have syntax sugar for this:
                 p
                     - yield 'Paragraph {}'.format(i)
         :footer_block
-            p
-                " Index page
+            p "Index page"
 
 Arguments - you can use arg=`parentised python expression or variable name` or `tag.class {'a': 5, 'b': ' '.join(options.classes)}` form.
 
