@@ -32,8 +32,10 @@ tokenizer = make_tokenizer(specs)
 def idented_tokenizer(s):
     eol = False
     idents = [0]
+    last_token = None
     for token in tokenizer(s):
         # print(token)
+        last_token = token
         if token.type == 'NEWLINE':
             eol = True
             yield token
@@ -43,16 +45,18 @@ def idented_tokenizer(s):
             ident = len(value) - len(value.lstrip(' '))
             last = idents[-1]
             if ident > last:
-                yield Token('INDENT', value, start=token.start, end=token.end)
+                yield Token('INDENT', 'INDENT', start=token.start, end=token.end)
                 idents.append(ident)
             while ident < last:
-                yield Token('DEDENT', value, start=token.start, end=token.end)
+                yield Token('DEDENT', 'DEDENT', start=token.start, end=token.end)
                 idents.pop()
                 last = idents[-1]
         yield token
         eol = False
+    if last_token.type != 'NEWLINE':
+        yield Token('NEWLINE', '\n', start=last_token.end, end=last_token.end)
     for i in idents[1:]:
-        yield Token('DEDENT', '', start=token.start, end=token.end)
+        yield Token('DEDENT', 'DEDENT', start=token.start, end=token.end)
     yield Token('END', '', start=token.start, end=token.end)
 
 

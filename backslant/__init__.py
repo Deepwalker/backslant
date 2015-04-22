@@ -203,8 +203,8 @@ def parse_to_ast(filename):
                     parse_ast=parse_ast,
                     filename=filename
                 )
-    # for tok in idented_tokenizer(open(filename).read()):
-    #     print(tok)
+    # for index, tok in enumerate(idented_tokenizer(open(filename).read())):
+    #     print(index, tok)
     try:
         ast = bs_parser.parse(list(idented_tokenizer(open(filename).read())))
     except NoParseError as e:
