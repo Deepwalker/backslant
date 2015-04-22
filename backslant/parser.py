@@ -54,7 +54,7 @@ single_attr = html_name_str
 pair_attr = (html_name_str + sometok('=') + attribute_value) >> (lambda toks: (toks[0], toks[2]))
 attribute = pair_attr | single_attr
 attributes = (
-    ((sometok('(') + many(attribute) + sometok(')')) >> (lambda toks: toks[1]))
+    ((sometok('(') + many(attribute + skip(maybe(space))) + sometok(')')) >> (lambda toks: toks[1]))
     | (paren_match('{', '}') >> combine)
 )
 tag_class = (sometok('.') + html_name_str) >> (lambda toks: ('class', toks[1]))
