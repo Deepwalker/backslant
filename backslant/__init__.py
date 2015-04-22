@@ -130,6 +130,25 @@ class AstParsers:
         ast.fix_missing_locations(res)
         yield res
 
+    def python_yield(string, childs=None, line_n_offset={}, parse_ast=None, filename='<backslant>'):
+        node = ast.parse(string.strip(), filename=filename).body[0].value
+        yield ast.Expr(
+            value=ast.Yield(
+                value=node,
+            ),
+            **line_n_offset
+        )
+
+    def python_yield_from(string, childs=None, line_n_offset={}, parse_ast=None, filename='<backslant>'):
+        node = ast.parse(string.strip(), filename=filename).body[0].value
+        yield ast.Expr(
+            value=ast.YieldFrom(
+                value=node,
+            ),
+            **line_n_offset
+        )
+
+
     def macro(name, *arg, childs=None, line_n_offset={}, parse_ast=None, filename='<backslant>'):
         if name == 'call':
             if not arg:
@@ -175,7 +194,7 @@ def parse_to_ast(filename):
             # print(' ' * space, line)
             converter_name, (lineno, offset), *args = line
             line_n_offset = {'lineno': lineno, 'col_offset': offset}
-            converter = getattr(AstParsers, converter_name, None)
+            converter = getattr(AstParsers, converter_name)
             if converter:
                 yield from converter(
                     *args,

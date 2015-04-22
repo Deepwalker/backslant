@@ -3,7 +3,7 @@ html
     head
         - a = 'pam'
         title(a="a" b="b")
-            - yield options.get('title', 'empty')
+            = options.get('title', 'empty')
         style """
             * {
                 font-family: Helvetica;
@@ -15,7 +15,7 @@ html
         div.content
             - content = options.get('content')
             - if content:
-                - yield from content()
+                == content()
         div.footer
             | Backslant
             | © 2015

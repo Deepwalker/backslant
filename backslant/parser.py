@@ -40,6 +40,10 @@ def paren_match(start, end=None):
 
 
 python_call = (sometok('-') + skip_space + to_end_of_line) >> (lambda toks: ('python', toks[0].start, toks[1], tuple()))
+python_yield_from_call = (skip(sometok('=')) + sometok('=') + skip_space + to_end_of_line) >> (lambda toks: ('python_yield_from', toks[0].start, toks[1]))
+python_yield_call = (sometok('=') + skip_space + to_end_of_line) >> (lambda toks: ('python_yield', toks[0].start, toks[1]))
+
+
 macro = (skip(sometok(':')) + sometype('NAME') + to_end_of_line) >> (lambda toks: ('macro', toks[0].start, toks[0].value, toks[1]))
 string = (sometok('|') + to_end_of_line) >> (lambda tok: ('string', tok[0].start, tok[1]))
 string = string | sometype('STRING') >> (lambda tok: ('string', tok.start, tok.value))
@@ -64,7 +68,7 @@ tag = tag_name + many(tag_class | tag_id) + maybe(skip_space + attributes) + may
 
 
 # lines and blocks
-definition = (tag | python_call | macro | string)
+definition = (tag | python_yield_from_call | python_yield_call | python_call | macro | string)
 line = forward_decl()
 block = (skip(sometype('INDENT')) + many(line) + skip(sometype('DEDENT')))
 

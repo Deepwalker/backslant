@@ -8,6 +8,6 @@
         div
             - for i in range(10):
                 p
-                    - yield "Paragraph {}".format(i)
+                    = "Paragraph {}".format(i)
         custom-tag#identifier
-        :call input('name', value='Me!')
+        == input('name', value='Me!')

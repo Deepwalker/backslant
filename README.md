@@ -27,7 +27,7 @@ And templates/home/index.bs:
     html
         head
             title
-                - yield options['title']
+                = options['title']
         body
             div.content#content
                 h1#header "Header"
@@ -35,16 +35,17 @@ And templates/home/index.bs:
 You can define a function:
 
     - def render_form(method):
-        form method=method
+        form(method=method)
             input(type="text" value="123")
 
 End call it:
 
     h1
-        - yield from render_form('POST')
+        == render_form('POST')
 
-Yes, its this simple, you just use python constructions. And for now inheritance of templates
-you can made just with function.
+Yes, its this simple, you just use python constructions. There `==` is shotrcut for `- yield from`. And `=` is a shortcut for `- yield`.
+
+And for now inheritance of templates you can made just with function.
 
 base.bs:
 
@@ -56,7 +57,7 @@ base.bs:
         h1{'class': ' '.join(['main', 'content'], 'ng-app': 'Application'}
             | Page Header
         div.content
-            - yield from options['content_block']()
+            == options['content_block']()
         div.footer
             | Backslant © 2015
 
@@ -66,8 +67,8 @@ index.bs:
     - def content():
         - for i in range(10):
             p
-                - yield 'Paragraph {}'.format(i)
-    - yield from base.render(content_block=content)
+                = 'Paragraph {}'.format(i)
+    == base.render(content_block=content)
 
 I think about adding something like ruby blocks or something to made this a bit more simpler, but
 what can be more simple then functions define and call?
@@ -78,7 +79,7 @@ But we have syntax sugar for this:
         :content_block
             - for i in range(10):
                 p
-                    - yield 'Paragraph {}'.format(i)
+                    = 'Paragraph {}'.format(i)
         :footer_block
             p "Index page"
 
