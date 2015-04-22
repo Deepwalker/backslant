@@ -13,7 +13,7 @@ def read(fname):
 
 setupconf = dict(
     name='backslant',
-    version='0.2.6',
+    version='0.2.7',
     license='BSD',
     url='https://github.com/Deepwalker/backslant/',
     author='Deepwalker',

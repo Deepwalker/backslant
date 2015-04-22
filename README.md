@@ -95,7 +95,29 @@ Render or not render?
 When template compiled, we need it to place in module somehow. If you have any tags  or calls in top level, then we definitely must place them into function. And we create `render` function for this purpose. Then you import template and call this `render`.
 
 But if you have not in top level, then will yield anything, then function is not needed - you can create library file.
-So - if you template on top level only defines functions and imports, then backslant will not implicitly cover it in `render` function, and this is way to define your template libs.
+So - if you template on top level only defines functions and imports, then backslant will not implicitly cover it in `render` function, and this is way to define your template libs. You even can distribute it on PyPi.
+
+
+Flask
+-----
+
+If you want to integrate backslant into existing project, it can be painful to rewrite all templates. So
+we have workaround:
+
+    from backslant.flask import jinja2_integration
+    extend_jinja2, include_jinja2 = jinja2_integration(application)
+
+And call it in template:
+
+    - from my_app.lib.backslant import extend_jinja2, include_jinja2
+
+    :call extend_jinja2('layouts/base.html')
+        - def content(ctx):
+            == include_jinja2('layouts/header.html')
+            div.container
+                div.page-header
+                    h1
+                        = options['company'].alias
 
 
 Afterwords
