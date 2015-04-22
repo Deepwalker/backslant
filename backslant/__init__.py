@@ -195,23 +195,31 @@ def parse_to_ast(filename):
 
 
 def func_compile(filename):
-    result_ast = ast.Module(
-        body=[ast.FunctionDef(
-            name='render',
-            args=ast.arguments(
-                args=[],
-                vararg=ast.arg(arg='arguments', annotation=None),
-                kwonlyargs=[],
-                kw_defaults=[],
-                kwarg=ast.arg(arg='options', annotation=None),
-                defaults=[],
-            ),
-            body=parse_to_ast(filename),
-            decorator_list=[],
-            returns=None,
-        )],
-        lineno=1, col_offset=0,
-    )
+    body = parse_to_ast(filename)
+    is_plain = any(isinstance(expr, ast.Expr) and isinstance(expr.value, (ast.Yield, ast.YieldFrom)) for expr in body)
+    if is_plain:
+        result_ast = ast.Module(
+            body=[ast.FunctionDef(
+                name='render',
+                args=ast.arguments(
+                    args=[],
+                    vararg=ast.arg(arg='arguments', annotation=None),
+                    kwonlyargs=[],
+                    kw_defaults=[],
+                    kwarg=ast.arg(arg='options', annotation=None),
+                    defaults=[],
+                ),
+                body=body,
+                decorator_list=[],
+                returns=None,
+            )],
+            lineno=1, col_offset=0,
+        )
+    else:
+        result_ast = ast.Module(
+            body=body,
+            lineno=1, col_offset=0,
+        )
     result_ast = ast.fix_missing_locations(result_ast)
     # dump_ast(result_ast)
     return compile(result_ast, filename, 'exec')
@@ -238,20 +246,20 @@ def tag_attribute(name, value):
     return u'%s="%s"' % (escape(name), escape(value))
 
 
-def start_tag(name, *single_args, ** kwargs):
+def start_tag(_tag_name, *single_args, ** kwargs):
     attributes =' '.join(
         [tag_attribute(name, value) for name, value in kwargs.items()]
         + [escape(name) for name in single_args]
     )
     if attributes:
-        return Markup('<{name} {attributes}>'.format(name=name.rstrip('/'), attributes=attributes))
-    return Markup('<{}>'.format(name.rstrip('/')))
+        return Markup('<{name} {attributes}>'.format(name=_tag_name.rstrip('/'), attributes=attributes))
+    return Markup('<{}>'.format(_tag_name.rstrip('/')))
 
 
-def stop_tag(name, *single_attrs, **kwargs):
-    if name[-1] == '/':
+def stop_tag(_tag_name, *single_attrs, **kwargs):
+    if _tag_name[-1] == '/':
         return ''
-    return Markup('</{}>'.format(name))
+    return Markup('</{}>'.format(_tag_name))
 
 
 import imp
@@ -261,7 +269,7 @@ class PymlFinder(object):
     def __init__(self, basepath, hook='backslant_hook'):
         self.basepath = basepath
         self.hook = hook
-        # print('LOADER', basepath)
+        # print('FINDER', basepath)
 
     def find_spec(self, fullname, path, target_module):
         # print(fullname, path, target_module)
@@ -269,7 +277,7 @@ class PymlFinder(object):
             return
         if fullname == self.hook:
             return ModuleSpec(fullname, TopLevelLoader(fullname, self.basepath), origin=path, is_package=True)
-        segments = fullname.split('.')[1:] # strip hook
+        segments = fullname[len(self.hook) + 1:].split('.')
         path = op.join(self.basepath, *segments)
         if op.isdir(path):
             is_package = True

@@ -16,8 +16,8 @@ So, with this principles in mind, you can try this proof of concept thing, due i
 
     import backslant
 
-    sys.meta_path.insert(0, backslant.PymlFinder('./templates', hook='backslant_import'))
-    from backslant_import.home import index
+    sys.meta_path.insert(0, backslant.PymlFinder('./templates', hook='mypkg.templates'))
+    from mypkg.templates.home import index
 
     for chunk in index.render(title='The Real Thing'):
         print(chunk)
@@ -70,7 +70,7 @@ index.bs:
     - yield from base.render(content_block=content)
 
 I think about adding something like ruby blocks or something to made this a bit more simpler, but
-what can be simple then functions define and call?
+what can be more simple then functions define and call?
 
 But we have syntax sugar for this:
 
@@ -82,7 +82,23 @@ But we have syntax sugar for this:
         :footer_block
             p "Index page"
 
-Arguments - you can use arg=`parentised python expression or variable name` or `tag.class {'a': 5, 'b': ' '.join(options.classes)}` form.
+Arguments
+---------
+
+To define tag arguments you can use arg=`parentised python expression or variable name` or `tag.class {'a': 5, 'b': ' '.join(options.classes)}` form.
+
+
+Render or not render?
+---------------------
+
+When template compiled, we need it to place in module somehow. If you have any tags  or calls in top level, then we definitely must place them into function. And we create `render` function for this purpose. Then you import template and call this `render`.
+
+But if you have not in top level, then will yield anything, then function is not needed - you can create library file.
+So - if you template on top level only defines functions and imports, then backslant will not implicitly cover it in `render` function, and this is way to define your template libs.
+
+
+Afterwords
+----------
 
 I have completed examples with flask and http.server in examples folder. And you can compare perfomance with jinja2. Its almost equal.
 

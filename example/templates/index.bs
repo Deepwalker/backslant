@@ -1,4 +1,5 @@
 - from . import base
+- from .lib import input
 
 :call base.render(**options)
     :content
@@ -9,3 +10,4 @@
                 p
                     - yield "Paragraph {}".format(i)
         custom-tag#identifier
+        :call input('name', value='Me!')

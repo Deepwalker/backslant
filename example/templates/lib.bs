@@ -1,0 +1,2 @@
+- def input(name, type='text', value=None):
+    input/{"name": name, "type": type, "value": value}
