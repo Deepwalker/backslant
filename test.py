@@ -1,5 +1,5 @@
 import sys
-from backslant import PymlFinder
+from backslant import PymlFinder, BackslantFinder
 
 
 def print_render(func, *a, **kw):
@@ -19,3 +19,8 @@ print_render(test.render, title='The Incredible')
 
 import backslant_hook.templates.index as index
 print_render(index.render)
+
+print('Test hook less importer')
+sys.meta_path.insert(0, BackslantFinder())
+from example import package_import_test
+print_render(package_import_test.render)

@@ -1,6 +1,7 @@
 import sys
 import ast
 from io import StringIO
+from functools import wraps
 
 from markupsafe import Markup, escape
 from funcparserlib.parser import NoParseError
@@ -19,7 +20,7 @@ class AstParsers:
         )
 
     def tag(args, childs=None, line_n_offset={}, parse_ast=None, filename='<backslant>'):
-        name, classes_n_id, arguments, text = args
+        name, classes_n_id, arguments, dynamics, text = args
         single_attrs = []
         pair_keys = []
         pair_vals = []
@@ -308,6 +309,23 @@ class PymlFinder(object):
         return spec
 
 
+class BackslantFinder(object):
+    def __init__(self):
+        pass
+
+    def find_spec(self, fullname, path, target_module):
+        # print(fullname, path, target_module)
+        if not path:
+            return None
+        segments = fullname.split('.')
+        path = op.join(path[0], segments[-1])
+        path = path + '.bs'
+        if not op.exists(path):
+            return None
+        spec = ModuleSpec(fullname, PymlLoader(path), origin=path, is_package=False)
+        return spec
+
+
 class TopLevelLoader(object):
     def __init__(self, fullname, path):
         self.fullname = fullname
@@ -340,6 +358,24 @@ class PymlLoader(object):
         code = func_compile(self.filename)
         exec(code, mod.__dict__)
         return mod
+
+
+# utils for render templates to string and for escaping
+def escape_generator(generator):
+    for tok in generator:
+        yield escape(tok)
+
+
+def escaped(template):
+    @wraps(template)
+    def _template(*a, **kw):
+        for tok in template(*a, **kw):
+            yield escape(tok)
+    return _template
+
+
+def to_string(generator):
+    return ''.join(escape_generator(generator))
 
 
 if __name__ == '__main__':

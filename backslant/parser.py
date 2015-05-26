@@ -25,10 +25,13 @@ sometype = lambda t: some(lambda tok: tok.type == t)
 newline = skip(sometype('NEWLINE'))
 name = sometype('NAME')
 space = sometype('SPACE')
+indent = sometype('INDENT')
+dedent = sometype('DEDENT')
 python_name = name + many(sometok('.') + name)
 to_end_of_line = many(some(lambda token: token.type != 'NEWLINE')) >> combine
 take_value = lambda tok: tok.value
 skip_space = skip(maybe(space))
+skip_whitespace = skip(many(space | newline | indent | dedent))
 
 def paren_match(start, end=None):
     if not end:
@@ -58,13 +61,14 @@ single_attr = html_name_str
 pair_attr = (html_name_str + sometok('=') + attribute_value) >> (lambda toks: (toks[0], toks[2]))
 attribute = pair_attr | single_attr
 attributes = (
-    ((sometok('(') + many(attribute + skip(maybe(space))) + sometok(')')) >> (lambda toks: toks[1]))
+    ((sometok('(') + skip_whitespace + many(attribute + skip_whitespace) + sometok(')')) >> (lambda toks: toks[1]))
     | (paren_match('{', '}') >> combine)
 )
+dynamic_attrs = skip(sometok('*') + sometok('*')) + name >> (lambda tok: tok.value)
 tag_class = (sometok('.') + html_name_str) >> (lambda toks: ('class', toks[1]))
 tag_id = skip(sometok('#')) + html_name_str >> (lambda tok: ('id', tok))
 tag_name = (maybe(sometok('!')) + html_name + maybe(sometok('/'))) >> combine
-tag = tag_name + many(tag_class | tag_id) + maybe(skip_space + attributes) + maybe(skip(space) + text) >> (lambda toks: ('tag', (0, 0), toks))
+tag = tag_name + many(tag_class | tag_id) + maybe(skip_space + attributes) + skip_space + maybe(dynamic_attrs) + skip_space + maybe(text) >> (lambda toks: ('tag', (0, 0), toks))
 
 
 # lines and blocks

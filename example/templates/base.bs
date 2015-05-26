@@ -2,7 +2,10 @@
 html
     head
         - a = 'pam'
-        title(a="a" b="b")
+        title (
+            a="a"
+            b="b"
+        )
             = options.get('title', 'empty')
         style """
             * {

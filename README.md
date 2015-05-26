@@ -12,15 +12,21 @@ Third - it works through imports. If you want to get template just import it and
 other template - import it. If you want template in some dir, import it! Like ```from . import other_template```.
 Use absolute or relative imports.
 
-So, with this principles in mind, you can try this proof of concept thing, due it is not complete:
+So, with this principles in mind, you can try backslant:
 
     import backslant
+    # you need create __init__.py in templates folder to make this work
+    sys.meta_path.insert(0, backslant.BackslantFinder())
 
-    sys.meta_path.insert(0, backslant.PymlFinder('./templates', hook='mypkg.templates'))
     from mypkg.templates.home import index
 
     for chunk in index.render(title='The Real Thing'):
         print(chunk)
+
+Or, if you want send rendered html to browser:
+
+    from backslant import to_string
+    to_string(index.render(title='The Real Thing'))
 
 And templates/home/index.bs:
 
@@ -104,12 +110,11 @@ Flask
 If you want to integrate backslant into existing project, it can be painful to rewrite all templates. So
 we have workaround:
 
-    from backslant.flask import jinja2_integration
-    extend_jinja2, include_jinja2 = jinja2_integration(application)
+    from backslant.flask import extend_jinja2, include_jinja2
 
 And call it in template:
 
-    - from my_app.lib.backslant import extend_jinja2, include_jinja2
+    - from backslant.flask import extend_jinja2, include_jinja2
 
     :call extend_jinja2('layouts/base.html')
         - def content(ctx):

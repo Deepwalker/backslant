@@ -1,3 +1,4 @@
+- import asyncio
 - from . import test2
 - def ku(text, callback=None):
     h2(a='5')
@@ -20,7 +21,8 @@ html
         - yield from test2.render(**options)
         h1(class="project")
             | kuku
-        p{'krom-pom' + '_': 'tom tom' + ' ' + 'tam tam'}
+        - dynamic_attrs = {'dynamic_a': 'dynamic_value'}
+        p{'krom-pom' + '_': 'tom tom' + ' ' + 'tam tam'} **dynamic_attrs
             | colors of the magic
         div
             table
