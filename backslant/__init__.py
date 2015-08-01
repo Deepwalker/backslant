@@ -318,7 +318,7 @@ class BackslantFinder(object):
         if not path:
             return None
         segments = fullname.split('.')
-        path = op.join(path[0], segments[-1])
+        path = op.join(list(path)[0], segments[-1])
         path = path + '.bs'
         if not op.exists(path):
             return None

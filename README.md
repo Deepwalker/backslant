@@ -49,7 +49,8 @@ End call it:
     h1
         == render_form('POST')
 
-Yes, its this simple, you just use python constructions. There `==` is shotrcut for `- yield from`. And `=` is a shortcut for `- yield`.
+Yes, its this simple, you just use python constructions. There `==` is shotrcut for `- yield from`.
+And `=` is a shortcut for `- yield`.
 
 And for now inheritance of templates you can made just with function.
 
@@ -92,16 +93,20 @@ But we have syntax sugar for this:
 Arguments
 ---------
 
-To define tag arguments you can use arg=`parentised python expression or variable name` or `tag.class {'a': 5, 'b': ' '.join(options.classes)}` form.
+To define tag arguments you can use arg=`parentised python expression or variable name` or
+`tag.class {'a': 5, 'b': ' '.join(options.classes)}` form.
 
 
 Render or not render?
 ---------------------
 
-When template compiled, we need it to place in module somehow. If you have any tags  or calls in top level, then we definitely must place them into function. And we create `render` function for this purpose. Then you import template and call this `render`.
+When template compiled, we need it to place in module somehow. If you have any tags or calls in top level,
+then we definitely must place them into function. And we create `render` function for this purpose.
+Then you import template and call this `render`.
 
 But if you have not in top level, then will yield anything, then function is not needed - you can create library file.
-So - if you template on top level only defines functions and imports, then backslant will not implicitly cover it in `render` function, and this is way to define your template libs. You even can distribute it on PyPi.
+So - if you template on top level only defines functions and imports, then backslant will not implicitly cover
+it in `render` function, and this is the way to define your template libs. You can even distribute it on PyPi.
 
 
 Flask
@@ -128,6 +133,7 @@ And call it in template:
 Afterwords
 ----------
 
-I have completed examples with flask and http.server in examples folder. And you can compare perfomance with jinja2. Its almost equal.
+I have completed examples with flask and http.server in examples folder. And you can compare perfomance with jinja2.
+Its almost equal.
 
 I will complete feature set soon, stay tuned.
