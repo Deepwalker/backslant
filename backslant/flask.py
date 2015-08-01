@@ -32,7 +32,9 @@ class BSTemplate(Template):
         self.name = repr(bs_renderer)
 
     def root_render_func(self, context):
-        return cohorts.render(context=context)
+        if hasattr(self.renderer, 'render'):
+            return self.renderer.render(context=context)
+        return self.renderer(context=context)
 
     def new_context(self, vars, shared=False, locals=None):
         return dict(vars=vars, locals=locals)
