@@ -10,13 +10,11 @@ def combine(toks):
             yield tks
             return
         if isinstance(tks, Token):
-            yield tks.value
+            if tks.value not in ('INDENT', 'DEDENT'):
+                yield tks.value
             return
         for tok in tks:
-            if isinstance(tok, Token):
-                yield tok.value
-            else:
-                yield from inner(tok)
+            yield from inner(tok)
     return ''.join(inner(toks))
 
 
