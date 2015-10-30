@@ -2,12 +2,56 @@ import sys
 import ast
 from io import StringIO
 from functools import wraps
+from copy import deepcopy
 
 from markupsafe import Markup, escape
 from funcparserlib.parser import NoParseError
 
 from .lexer import idented_tokenizer
 from .parser import bs_parser
+
+
+def fix_missing_locations(node):
+    lineno = 1
+    col_offset_lineno = 1
+    col_offset = 0
+    def _fix(node):
+        nonlocal lineno, col_offset
+        if 'lineno' in node._attributes:
+            if hasattr(node, 'lineno'):
+                lineno = max(lineno, node.lineno)
+            node.lineno = lineno
+        if col_offset_lineno != lineno:
+            col_offset = 0
+        if 'col_offset' in node._attributes:
+            if hasattr(node, 'col_offset'):
+                col_offset = max(col_offset, node.col_offset)
+            node.col_offset = col_offset
+        for child in ast.iter_child_nodes(node):
+            _fix(child)
+    _fix(node)
+    return node
+
+
+def dump_ast(node, tabs=0):
+    class Visitor(ast.NodeVisitor):
+        def __init__(self):
+            self.stack = 0
+        def visit(self, node):
+            space = "    " * self.stack
+            if 'lineno' in node._attributes:
+                space = space + ' %s ' % node.lineno
+            if 'col_offset' in node._attributes:
+                space = space + ' %s ' % node.col_offset
+            print(space + repr(node))
+            if hasattr(node, '_fields'):
+                for field in node._fields:
+                    if not isinstance(getattr(node, field), ast.AST):
+                        print(space, field, '=', repr(getattr(node, field)))
+            self.stack += 1
+            super(Visitor, self).visit(node)
+            self.stack -= 1
+    Visitor().visit(node)
 
 
 class AstParsers:
@@ -35,7 +79,7 @@ class AstParsers:
                 ids.append(cls_or_id)
         if classes:
             pair_keys.append('class')
-            pair_vals.append(ast.Str(s=' '.join(classes)))
+            pair_vals.append(ast.Str(s=' '.join(classes), **line_n_offset))
         # TODO do we need multidict?
         if ids:
             pair_keys.append('id')
@@ -52,7 +96,7 @@ class AstParsers:
         # _tag_start(name, *single_attrs, **attributes)
         if pair_keys and pair_vals:
             for key, value in zip(pair_keys, pair_vals):
-                keywords.append(ast.keyword(arg=key, value=value))
+                keywords.append(ast.keyword(arg=key, value=value, **line_n_offset))
         yield ast.Expr(
             value=ast.Yield(
                 value=ast.Call(func=ast.Name(id='_tag_start', ctx=ast.Load()),
@@ -65,14 +109,14 @@ class AstParsers:
             **line_n_offset
         )
         if text:
-            yield from AstParsers.string(text)
+            yield from AstParsers.string(text, line_n_offset=line_n_offset)
         if childs:
             yield from childs
         yield ast.Expr(
             value=ast.Yield(
                 value=ast.Call(func=ast.Name(id='_tag_stop', ctx=ast.Load()),
                     args=[ast.Str(name)] + single_attrs,
-                    keywords=keywords,
+                    keywords=deepcopy(keywords),
                     starargs=None,
                     kwargs=None
                 ),
@@ -128,7 +172,6 @@ class AstParsers:
                 except_hndl.lineno = ln
                 except_hndl.col_offset = off
                 elsenode.handlers = (elsenode.handlers or []) + [except_hndl]
-        ast.fix_missing_locations(res)
         yield res
 
     def python_yield(string, childs=None, line_n_offset={}, parse_ast=None, filename='<backslant>'):
@@ -240,26 +283,9 @@ def func_compile(filename):
             body=body,
             lineno=1, col_offset=0,
         )
-    result_ast = ast.fix_missing_locations(result_ast)
+    fix_missing_locations(result_ast)
     # dump_ast(result_ast)
     return compile(result_ast, filename, 'exec')
-
-
-def dump_ast(node, tabs=0):
-    class Visitor(ast.NodeVisitor):
-        def __init__(self):
-            self.stack = 0
-        def visit(self, node):
-            space = "    " * self.stack
-            print(space + repr(node))
-            if hasattr(node, '_fields'):
-                for field in node._fields:
-                    if not isinstance(getattr(node, field), ast.AST):
-                        print(space, field, '=', repr(getattr(node, field)))
-            self.stack += 1
-            super(Visitor, self).visit(node)
-            self.stack -= 1
-    Visitor().visit(node)
 
 
 def tag_attribute(name, value):

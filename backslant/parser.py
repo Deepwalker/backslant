@@ -2,6 +2,28 @@ from funcparserlib.parser import many, maybe, skip, some, forward_decl, NoParseE
 from funcparserlib.lexer import Token
 
 
+def combine_to_token(toks):
+    first = None
+    last = None
+    def inner(tks):
+        nonlocal first, last
+        if tks is None:
+            return
+        if isinstance(tks, str):
+            yield tks
+            return
+        if isinstance(tks, Token):
+            if tks.value not in ('INDENT', 'DEDENT'):
+                yield tks.value
+            if not first:
+                first = tks
+            last = tks
+            return
+        for tok in tks:
+            yield from inner(tok)
+    return Token('combine', ''.join(inner(toks)), start=(first.start if first else None), end=(last.end if last else None))
+
+
 def combine(toks):
     def inner(tks):
         if tks is None:
@@ -65,8 +87,17 @@ attributes = (
 dynamic_attrs = skip(sometok('*') + sometok('*')) + name >> (lambda tok: tok.value)
 tag_class = (sometok('.') + html_name_str) >> (lambda toks: ('class', toks[1]))
 tag_id = skip(sometok('#')) + html_name_str >> (lambda tok: ('id', tok))
-tag_name = (maybe(sometok('!')) + html_name + maybe(sometok('/'))) >> combine
-tag = tag_name + many(tag_class | tag_id) + maybe(skip_space + attributes) + skip_space + maybe(dynamic_attrs) + skip_space + maybe(text) >> (lambda toks: ('tag', (0, 0), toks))
+tag_name = (maybe(sometok('!')) + html_name + maybe(sometok('/'))) >> combine_to_token
+tag = (
+    tag_name
+    + many(tag_class | tag_id)
+    + maybe(skip_space + attributes)
+    + skip_space
+    + maybe(dynamic_attrs)
+    + skip_space
+    + maybe(text)
+    >> (lambda toks: ('tag', toks[0].start, [toks[0].value] + list(toks[1:])))
+)
 
 
 # lines and blocks
