@@ -115,7 +115,7 @@ class AstParsers:
         yield ast.Expr(
             value=ast.Yield(
                 value=ast.Call(func=ast.Name(id='_tag_stop', ctx=ast.Load()),
-                    args=[ast.Str(name)] + single_attrs,
+                    args=[ast.Str(name)] + deepcopy(single_attrs),
                     keywords=deepcopy(keywords),
                     starargs=None,
                     kwargs=None
