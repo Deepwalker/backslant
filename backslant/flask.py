@@ -1,5 +1,8 @@
 # Flask Jinja2 integration for backslant
+from importlib import import_module
+
 from flask import current_app
+import jinja2
 from jinja2.environment import Template
 from . import escaped, Markup
 
@@ -30,6 +33,7 @@ class BSTemplate(Template):
     def __init__(self, bs_renderer):
         self.renderer = bs_renderer
         self.name = repr(bs_renderer)
+        self._uptodate = True
 
     def root_render_func(self, context):
         if hasattr(self.renderer, 'render'):
@@ -39,3 +43,27 @@ class BSTemplate(Template):
     def new_context(self, vars, shared=False, locals=None):
         return dict(vars=vars, locals=locals)
 
+
+class BackslantJinjaLoader():
+    def __init__(self, top_jinja_loader):
+        self.top_jinja_loader = top_jinja_loader
+
+    def get_source(self, environment, template):
+        module = None
+        try:
+            module = import_module(template)
+        except ImportError:
+            pass
+        if module:
+            return 'Source Of Module', template, None
+        return self.top_jinja_loader.get_source(environment, template)
+
+    def load(self, environment, name, globals=None):
+        module = None
+        try:
+            module = import_module(name)
+        except ImportError:
+            pass
+        if module:
+            return BSTemplate(module)
+        return self.top_jinja_loader.load(environment, name, globals)

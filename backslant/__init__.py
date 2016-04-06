@@ -202,7 +202,7 @@ class AstParsers:
             call = node.body[0].value
             for child in childs:
                 if not isinstance(child, ast.FunctionDef):
-                    raise ValueError('{} only function defs are allowed under :call directive'.format(lineno))
+                    raise ValueError('{} only function defs are allowed under :call directive'.format(line_n_offset))
                 yield child
                 name = child.name
                 call.keywords.append(
