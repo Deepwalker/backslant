@@ -33,7 +33,9 @@ class BSTemplate(Template):
     def __init__(self, bs_renderer):
         self.renderer = bs_renderer
         self.name = repr(bs_renderer)
-        self._uptodate = True
+
+    def _uptodate(self):
+        return True
 
     def root_render_func(self, context):
         if hasattr(self.renderer, 'render'):
@@ -47,23 +49,27 @@ class BSTemplate(Template):
 class BackslantJinjaLoader():
     def __init__(self, top_jinja_loader):
         self.top_jinja_loader = top_jinja_loader
+        self.cache_module = {}
 
-    def get_source(self, environment, template):
-        module = None
+    def try_module(self, name):
+        module = self.cache_module.get(name)
+        if module:
+            return module
         try:
-            module = import_module(template)
+            module = import_module(name)
+            self.cache_module[name] = module
         except ImportError:
             pass
+        return module
+
+    def get_source(self, environment, template):
+        module = self.try_module(template)
         if module:
             return 'Source Of Module', template, None
         return self.top_jinja_loader.get_source(environment, template)
 
     def load(self, environment, name, globals=None):
-        module = None
-        try:
-            module = import_module(name)
-        except ImportError:
-            pass
+        module = self.try_module(name)
         if module:
             return BSTemplate(module)
         return self.top_jinja_loader.load(environment, name, globals)
