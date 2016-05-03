@@ -1,7 +1,11 @@
 Backslant
 =========
 
-Is a template engine built in completely other way then before.
+[![PyPI](https://img.shields.io/pypi/dm/backslant.svg?style=flat-square)](https://pypi.python.org/pypi/backslant)
+[![PyPI](https://img.shields.io/pypi/v/backslant.svg?style=flat-square)](https://pypi.python.org/pypi/backslant)
+[![PyPI](https://img.shields.io/pypi/l/backslant.svg?style=flat-square)](https://pypi.python.org/pypi/backslant)
+
+The Backslant is a template engine that was built completely other way then before.
 
 First - you can use all python and you must use it if you want something more
 then just tags.
