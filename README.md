@@ -1,7 +1,6 @@
 Backslant
 =========
 
-[![PyPI](https://img.shields.io/pypi/dm/backslant.svg?style=flat-square)](https://pypi.python.org/pypi/backslant)
 [![PyPI](https://img.shields.io/pypi/v/backslant.svg?style=flat-square)](https://pypi.python.org/pypi/backslant)
 [![PyPI](https://img.shields.io/pypi/l/backslant.svg?style=flat-square)](https://pypi.python.org/pypi/backslant)
 
